@@ -2,7 +2,7 @@
 
 namespace App\Controller;
 
-use App\Entity\Result;
+use App\Entity\Results;
 use App\Utility\Utils;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
@@ -35,7 +35,7 @@ class ApiResultsCommandController extends AbstractController implements ApiResul
             return Utils::errorMessage(Response::HTTP_UNPROCESSABLE_ENTITY, 'Unprocessable Entity: Missing data.', $format);
         }
 
-        $result = new Result(
+        $result = new Results(
             $this->getUser()->getId(),
             $data['result'],
             new \DateTime($data['time'])
@@ -55,9 +55,9 @@ class ApiResultsCommandController extends AbstractController implements ApiResul
             return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
         }
 
-        $result = $this->entityManager->getRepository(Result::class)->find($resultId);
+        $result = $this->entityManager->getRepository(Results::class)->find($resultId);
 
-        if (!$result instanceof Result) {
+        if (!$result instanceof Results) {
             return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'Result not found.', $format);
         }
 
@@ -84,9 +84,9 @@ class ApiResultsCommandController extends AbstractController implements ApiResul
             return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
         }
 
-        $result = $this->entityManager->getRepository(Result::class)->find($resultId);
+        $result = $this->entityManager->getRepository(Results::class)->find($resultId);
 
-        if (!$result instanceof Result) {
+        if (!$result instanceof Results) {
             return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'Result not found.', $format);
         }
 

@@ -28,7 +28,7 @@ class Results implements JsonSerializable
         type: 'integer',
         nullable: false
     )]
-    #[Serializer\SerializedName(Result::USER_ID_ATTR), Serializer\XmlElement(cdata: false)]
+    #[Serializer\SerializedName(Results::USER_ID_ATTR), Serializer\XmlElement(cdata: false)]
     protected int $userId;
 
     #[ORM\Column(
@@ -37,7 +37,7 @@ class Results implements JsonSerializable
         length: 255,
         nullable: false
     )]
-    #[Serializer\SerializedName(Result::RESULT_ATTR), Serializer\XmlElement(cdata: false)]
+    #[Serializer\SerializedName(Results::RESULT_ATTR), Serializer\XmlElement(cdata: false)]
     protected string $result;
 
     #[ORM\Column(
@@ -45,7 +45,7 @@ class Results implements JsonSerializable
         type: 'datetime',
         nullable: false
     )]
-    #[Serializer\SerializedName(Result::TIME_ATTR), Serializer\XmlElement(cdata: false)]
+    #[Serializer\SerializedName(Results::TIME_ATTR), Serializer\XmlElement(cdata: false)]
     protected \DateTime $time;
 
     /**

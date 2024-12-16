@@ -3,7 +3,7 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\Result;
+use App\Entity\Results;
 use Symfony\Component\HttpFoundation\{Request, Response};
 
 /**

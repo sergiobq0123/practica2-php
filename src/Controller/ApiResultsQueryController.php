@@ -3,7 +3,7 @@
 
 namespace App\Controller;
 
-use App\Entity\Result;
+use App\Entity\Results;
 use App\Utility\Utils;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
@@ -35,7 +35,7 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
         }
 
         $user = $this->getUser();
-        $results = $this->entityManager->getRepository(Result::class)->findBy(['userId' => $user->getId()], ['time' => 'DESC']);
+        $results = $this->entityManager->getRepository(Results::class)->findBy(['userId' => $user->getId()], ['time' => 'DESC']);
 
         if (empty($results)) {
             return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'No results found.', $format);
@@ -65,9 +65,9 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
             return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
         }
 
-        $result = $this->entityManager->getRepository(Result::class)->find($resultId);
+        $result = $this->entityManager->getRepository(Results::class)->find($resultId);
 
-        if (!$result instanceof Result) {
+        if (!$result instanceof Results) {
             return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'Result not found.', $format);
         }
 
