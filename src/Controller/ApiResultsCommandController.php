@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Entity\Results;
 use App\Utility\Utils;
 use Doctrine\ORM\EntityManagerInterface;
-use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response};
 use Symfony\Component\Routing\Attribute\Route;
