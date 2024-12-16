@@ -26,6 +26,16 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
     {
     }
 
+    #[Route(
+        path: ".{_format}/{sort?id}",
+        name: 'cget',
+        requirements: [
+            'sort' => "id|email|roles",
+            '_format' => "json|xml"
+        ],
+        defaults: [ '_format' => 'json', 'sort' => 'id' ],
+        methods: [ Request::METHOD_GET ],
+    )]
     public function cgetAction(Request $request): Response
     {
         $format = Utils::getFormat($request);
@@ -57,6 +67,16 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
         );
     }
 
+    #[Route(
+        path: "/{resultId}.{_format}",
+        name: 'get',
+        requirements: [
+            "resultId" => "\d+",
+            '_format' => "json|xml"
+        ],
+        defaults: [ '_format' => 'json' ],
+        methods: [ Request::METHOD_GET ],
+    )]
     public function getAction(Request $request, int $resultId): Response
     {
         $format = Utils::getFormat($request);
@@ -91,6 +111,16 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
         );
     }
 
+    #[Route(
+        path: "/{userId}.{_format}",
+        name: 'options',
+        requirements: [
+            'userId' => "\d+",
+            '_format' => "json|xml"
+        ],
+        defaults: [ 'userId' => 0, '_format' => 'json' ],
+        methods: [ Request::METHOD_OPTIONS ],
+    )]
     public function optionsAction(int|null $resultId): Response
     {
         $methods = $resultId !== 0

@@ -28,6 +28,8 @@ tags:
     description: 'User login'
   - name: '👥 Users'
     description: 'User management'
+  - name: '📊 Results'
+    description: 'Results management'
 paths:
   /login_check:
     options:
@@ -230,6 +232,176 @@ paths:
           headers:
             Allow:
               $ref: '#/components/headers/Allow'
+  /results:
+    get:
+      tags: [ '📊 Results' ]
+      summary: Retrieves the collection of Result resources.
+      description: 'Returns all results from the system that the user has access to.'
+      operationId: api_results_cget
+      security:
+        - MiWApiSecurity: [ ]
+      responses:
+        '200':
+          description: 'Array of results'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    description: 'Results array'
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Result'
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+        '401':
+          $ref: '#/components/responses/401_Unauthorized_Response'
+        '403':
+          $ref: '#/components/responses/403_Forbidden_Response'
+    post:
+      tags: [ '📊 Results' ]
+      summary: Creates a Result resource.
+      description: 'Creates a new result.'
+      operationId: api_results_post
+      security:
+        - MiWApiSecurity: [ ]
+      requestBody:
+        $ref: '#/components/requestBodies/ResultRequestBody'
+      responses:
+        '201':
+          description: '`Created`: result created'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+        '400':
+          $ref: '#/components/responses/400_BadRequest_Response'
+        '401':
+          $ref: '#/components/responses/401_Unauthorized_Response'
+        '403':
+          $ref: '#/components/responses/403_Forbidden_Response'
+  '/results/{resultId}':
+      get:
+        tags: [ '📊 Results' ]
+        summary: Retrieves a Result resource based on a single ID.
+        description: 'Returns the result identified by `resultId`.'
+        operationId: api_results_get
+        parameters:
+          - $ref: '#/components/parameters/resultId'
+        security:
+          - MiWApiSecurity: [ ]
+        responses:
+          '200':
+            description: Result
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Result'
+            headers:
+              ETag:
+                $ref: '#/components/headers/ETag'
+          '401':
+            $ref: '#/components/responses/401_Unauthorized_Response'
+          '403':
+            $ref: '#/components/responses/403_Forbidden_Response'
+          '404':
+            $ref: '#/components/responses/404_Resource_Not_Found_Response'
+      put:
+        tags: [ '📊 Results' ]
+        summary: Updates the Result resource.
+        description: 'Updates the result identified by `resultId`.'
+        operationId: api_results_put
+        parameters:
+          - $ref: '#/components/parameters/resultId'
+          - $ref: '#/components/parameters/ifMatchParam'
+        security:
+          - MiWApiSecurity: [ ]
+        requestBody:
+          $ref: '#/components/requestBodies/ResultRequestBody'
+        responses:
+          '209':
+            description: '`Content Returned`: result previously existed and is now updated'
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Result'
+          '400':
+            $ref: '#/components/responses/400_BadRequest_Response'
+          '401':
+            $ref: '#/components/responses/401_Unauthorized_Response'
+          '403':
+            $ref: '#/components/responses/403_Forbidden_Response'
+          '404':
+            $ref: '#/components/responses/404_Resource_Not_Found_Response'
+          '412':
+            $ref: '#/components/responses/412_Precondition_Failed_Response'
+      delete:
+        tags: [ '📊 Results' ]
+        summary: Removes the Result resource.
+        description: 'Deletes the result identified by `resultId`.'
+        operationId: api_results_delete
+        parameters:
+          - $ref: '#/components/parameters/resultId'
+        security:
+          - MiWApiSecurity: [ ]
+        responses:
+          '204':
+            description: 'Result deleted <Response body is empty>'
+          '401':
+            $ref: '#/components/responses/401_Unauthorized_Response'
+          '403':
+            $ref: '#/components/responses/403_Forbidden_Response'
+          '404':
+            $ref: '#/components/responses/404_Resource_Not_Found_Response'
+
+  components:
+    schemas:
+      Result:
+        type: object
+        properties:
+          id:
+            description: 'Result Id'
+            type: integer
+            format: int64
+          result:
+            description: 'The actual result'
+            type: number
+          time:
+            description: 'Time when the result was recorded'
+            type: string
+            format: date-time
+          user_id:
+            description: 'ID of the user associated with the result'
+            type: integer
+        example:
+          id: 123
+          result: 42.5
+          time: '2024-01-01T00:00:00Z'
+          user_id: 1508
+    requestBodies:
+      ResultRequestBody:
+        description: '`Result` data'
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                result:
+                  description: 'The actual result'
+                  type: number
+                time:
+                  description: 'Time when the result was recorded'
+                  type: string
+                  format: date-time
+                user_id:
+                  description: 'ID of the user associated with the result'
+                  type: integer
 
 components:
   headers:
@@ -293,6 +465,28 @@ components:
       example:
         code: 200
         message: Ok
+    Result:
+      type: object
+      properties:
+        id:
+          description: 'Result Id'
+          type: integer
+          format: int64
+        result:
+          description: 'The actual result'
+          type: number
+        time:
+          description: 'Time when the result was recorded'
+          type: string
+          format: date-time
+        user_id:
+          description: 'ID of the user associated with the result'
+          type: integer
+      example:
+        id: 123
+        result: 42.5
+        time: '2024-01-01T00:00:00Z'
+        user_id: 1508
 
   responses:
     400_BadRequest_Response:
@@ -404,6 +598,30 @@ components:
                 description: 'User password'
                 type: string
                 format: password
+    ResultRequestBody:
+      description: '`Result` data'
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              result:
+                description: 'The actual result'
+                type: number
+              time:
+                description: 'Time when the result was recorded'
+                type: string
+                format: date-time
+              user_id:
+                description: 'ID of the user associated with the result'
+                type: integer
+          examples:
+            example-1:
+              value:
+                result: 42.5
+                time: '2024-01-01T00:00:00Z'
+                user_id: 1234
 
   parameters:
     userId:
@@ -420,6 +638,12 @@ components:
       schema:
         type: string
         pattern: "[0-9a-f]*"
+    resultId:
+      name: resultId
+      in: path
+      description: 'ID of result'
+      required: true
+      schema: { "type": "integer", pattern: '^\d+$' }
 
   examples:
     response-400:
