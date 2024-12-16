@@ -8,7 +8,7 @@ use JMS\Serializer\Annotation as Serializer;
 use JsonSerializable;
 
 #[ORM\Entity, ORM\Table(name: 'results')]
-class Result implements JsonSerializable
+class Results implements JsonSerializable
 {
     public final const RESULT_ATTR = 'result';
     public final const TIME_ATTR = 'time';
