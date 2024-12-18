@@ -46,10 +46,10 @@ class UserTest extends TestCase
      */
     public function testConstructor(): void
     {
-        $usuario = new User();
-        self::assertEmpty($usuario->getUserIdentifier());
-        self::assertEmpty($usuario->getEmail());
-        self::assertSame(0, $usuario->getId());
+        $usuario = new User('test@example.com', 'password123');
+        self::assertSame('test@example.com', $usuario->getUserIdentifier());
+        self::assertSame('test@example.com', $usuario->getEmail());
+        self::assertNotEmpty($usuario->getRoles());
     }
 
     /**

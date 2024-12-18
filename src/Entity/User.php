@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 // use Hateoas\Configuration\Annotation as Hateoas;
 use JetBrains\PhpStorm\ArrayShape;
@@ -49,6 +51,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, JsonSer
     #[Serializer\SerializedName(User::EMAIL_ATTR), Serializer\XmlElement(cdata: false)]
     protected string $email;
 
+    /**
+     * @var string[] Roles of the user
+     */
     #[ORM\Column(
         name: 'roles',
         type: 'json'
@@ -70,6 +75,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, JsonSer
     protected string $password;
 
     /**
+     * @var Collection<int, Results> A collection of user results
+     */
+    #[ORM\OneToMany(
+        targetEntity: Results::class,
+        mappedBy: 'user',
+        cascade: ['persist', 'remove'])]
+    private Collection $results;
+
+    /**
      * User constructor.
      * @param string $email
      * @param string $password
@@ -80,6 +94,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, JsonSer
         $this->email = $email;
         $this->roles = $roles;
         $this->setPassword($password);
+        $this->results = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -98,13 +113,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, JsonSer
     }
 
     /**
+     * @return Collection<int, Results>
+     */
+    public function getResults(): Collection
+    {
+        return $this->results;
+    }
+
+    public function addResult(Results $result): self
+    {
+        if (!$this->results->contains($result)) {
+            $this->results[] = $result;
+            $result->setUser($this);
+        }
+        return $this;
+    }
+
+
+    /**
      * The public representation of the user (e.g. a username, an email address, etc.)
      *
      * @see UserInterface
      */
     public function getUserIdentifier(): string
     {
-        return $this->getEmail();
+        if (empty($this->email)) {
+            throw new \RuntimeException('User identifier cannot be empty');
+        }
+        return $this->email;
     }
 
     /**

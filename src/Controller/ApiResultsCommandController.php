@@ -3,23 +3,35 @@
 namespace App\Controller;
 
 use App\Entity\Results;
+use App\Entity\User;
 use App\Utility\Utils;
 use Doctrine\ORM\EntityManagerInterface;
+use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response};
 use Symfony\Component\Routing\Attribute\Route;
 
+use function in_array;
+
 #[Route(
-    path: ApiUsersQueryInterface::RUTA_API_RESULTS,
+    path: ApiResultsQueryInterface::RUTA_API,
     name: 'api_results_'
 )]
 class ApiResultsCommandController extends AbstractController implements ApiResultsCommandInterface
 {
+    private const ROLE_ADMIN = 'ROLE_ADMIN';
     public function __construct(
         private readonly EntityManagerInterface $entityManager
     ) {
     }
 
+
+    /**
+     * * @throws JsonException
+     * *@throws \DateMalformedStringException
+     * @see ApiResultsQueryInterface::postAction()
+     *
+     */
     #[Route(
         path: ".{_format}",
         name: 'post',
@@ -37,22 +49,60 @@ class ApiResultsCommandController extends AbstractController implements ApiResul
             return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
         }
 
-        $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $body = $request->getContent();
+        $data = json_decode((string) $body, true, 512, JSON_THROW_ON_ERROR);
 
-        if (!isset($data['result'], $data['time'])) {
-            return Utils::errorMessage(Response::HTTP_UNPROCESSABLE_ENTITY, 'Unprocessable Entity: Missing data.', $format);
+        if (
+            !isset($data[Results::RESULT_ATTR], $data[Results::TIME_ATTR]) ||
+            !is_numeric($data[Results::RESULT_ATTR]) ||
+            !$this->isValidDate($data[Results::TIME_ATTR])
+        ) {
+            return Utils::errorMessage(Response::HTTP_UNPROCESSABLE_ENTITY, 'Invalid input data.', $format);
         }
 
+        try {
+            $time = new \DateTime($data[Results::TIME_ATTR]);
+        } catch (\Exception $e) {
+            return Utils::errorMessage(Response::HTTP_UNPROCESSABLE_ENTITY, 'Invalid time format.', $format);
+        }
+
+        $result_exists = $this->entityManager
+            ->getRepository(Results::class)
+            ->findOneBy([
+                Results::RESULT_ATTR => $data[Results::RESULT_ATTR],
+                Results::TIME_ATTR => new \DateTime($data[Results::TIME_ATTR])
+            ]);
+
+        if ($result_exists instanceof Results) {
+            return Utils::errorMessage(Response::HTTP_BAD_REQUEST, null, $format);
+        }
+
+
+
+        $currentUser = $this->getUser();
+        if (!$currentUser instanceof User) {
+            return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, null, $format);
+        }
+        $currentUser = $this->entityManager->getRepository(User::class)->find($currentUser->getId());
+
         $result = new Results(
-            $this->getUser()->getId(),
-            $data['result'],
-            new \DateTime($data['time'])
+            $currentUser,
+            (float) $data[Results::RESULT_ATTR],
+            $time
         );
 
         $this->entityManager->persist($result);
         $this->entityManager->flush();
 
-        return Utils::apiResponse(Response::HTTP_CREATED, ['result' => $result], $format);
+        return Utils::apiResponse(
+            Response::HTTP_CREATED,
+            [ Results::RESULTS_ATTR => $result ],
+            $format,
+            [
+                'Location' => $request->getScheme() . '://' . $request->getHttpHost() .
+                    ApiResultsQueryInterface::RUTA_API . '/' . $result->getId(),
+            ]
+        );
     }
 
     #[Route(
@@ -70,30 +120,51 @@ class ApiResultsCommandController extends AbstractController implements ApiResul
         $format = Utils::getFormat($request);
 
         if (!$this->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
+            return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, null, $format);
         }
 
         $result = $this->entityManager->getRepository(Results::class)->find($resultId);
 
+        $currentUser = $this->getUser();
+        if (!$currentUser instanceof User) {
+            return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, null, $format);
+        }
+        if (!$this->isGranted(self::ROLE_ADMIN) && $result->getUser()->getId() !== $currentUser->getId()) {
+            return Utils::errorMessage(Response::HTTP_FORBIDDEN, null, $format);
+        }
+
         if (!$result instanceof Results) {
-            return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'Result not found.', $format);
+            return Utils::errorMessage(Response::HTTP_NOT_FOUND, null, $format);
         }
 
-        $data = json_decode($request->getContent(), true);
-
-        if (isset($data['result'])) {
-            $result->setResult($data['result']);
+        try {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            return Utils::errorMessage(Response::HTTP_BAD_REQUEST, null . $e->getMessage(), $format);
         }
 
-        if (isset($data['time'])) {
-            $result->setTime(new \DateTime($data['time']));
+        $etag = md5(json_encode($result, JSON_THROW_ON_ERROR));
+        if (!$request->headers->has('If-Match') || $etag != $request->headers->get('If-Match')) {
+            return Utils::errorMessage(
+                Response::HTTP_PRECONDITION_FAILED,
+                'PRECONDITION FAILED: one or more conditions given evaluated to false',
+                $format
+            ); // 412
+        }
+
+
+        if (isset($data[Results::RESULT_ATTR])) {
+            $result->setResult($data[Results::RESULT_ATTR]);
+        }
+
+        if (isset($data[Results::TIME_ATTR])) {
+            $result->setTime(new \DateTime($data[Results::TIME_ATTR]));
         }
 
         $this->entityManager->flush();
 
-        return Utils::apiResponse(Response::HTTP_OK, ['result' => $result], $format);
+        return Utils::apiResponse(209, [Results::RESULTS_ATTR => $result], $format);
     }
-
 
     #[Route(
         path: "/{resultId}.{_format}",
@@ -113,7 +184,17 @@ class ApiResultsCommandController extends AbstractController implements ApiResul
             return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
         }
 
-        $result = $this->entityManager->getRepository(Results::class)->find($resultId);
+        $result = $this->entityManager
+            ->getRepository(Results::class)
+            ->find($resultId);
+
+        $currentUser = $this->getUser();
+        if (!$currentUser instanceof User) {
+            return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, 'Invalid user instance.', $format);
+        }
+        if (!$this->isGranted(self::ROLE_ADMIN) && $result->getUser()->getId() !== $currentUser->getId()) {
+            return Utils::errorMessage(Response::HTTP_FORBIDDEN, 'Access denied: You cannot modify this result.', $format);
+        }
 
         if (!$result instanceof Results) {
             return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'Result not found.', $format);
@@ -124,4 +205,15 @@ class ApiResultsCommandController extends AbstractController implements ApiResul
 
         return Utils::apiResponse(Response::HTTP_NO_CONTENT);
     }
+
+    private function isValidDate(string $date): bool
+    {
+        try {
+            new \DateTime($date);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
 }

@@ -8,28 +8,29 @@ use Symfony\Component\HttpFoundation\Response;
 interface ApiResultsCommandInterface
 {
     /**
-     * Crea un nuevo resultado.
+     * **POST** action<br>
+     * Summary: Creates a Results resource.
      *
-     * @param Request $request
-     * @return Response
+     * @param Request $request request
      */
     public function postAction(Request $request): Response;
 
     /**
-     * Actualiza un resultado específico.
+     * **PUT** action<br>
+     * Summary: Updates the Results resource.<br>
+     * _Notes_: Updates the result identified by <code>resultId</code>.
      *
-     * @param Request $request
-     * @param int $resultId
-     * @return Response
+     * @param Request $request request
+     * @param int $resultId Result id
      */
     public function putAction(Request $request, int $resultId): Response;
 
     /**
-     * Elimina un resultado específico.
+     * **DELETE** Action<br>
+     * Summary: Removes the User resource.<br>
+     * _Notes_: Deletes the user identified by <code>userId</code>.
      *
-     * @param Request $request
-     * @param int $resultId
-     * @return Response
+     * @param int $resultId Result id
      */
     public function deleteAction(Request $request, int $resultId): Response;
 }

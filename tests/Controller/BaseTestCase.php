@@ -2,7 +2,7 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\{ Message, User };
+use App\Entity\{Message, Results, User};
 use Doctrine\ORM\{ EntityManagerInterface, Tools\SchemaTool };
 use Faker\Factory as FakerFactoryAlias;
 use Faker\Generator as FakerGeneratorAlias;
@@ -60,9 +60,7 @@ class BaseTestCase extends WebTestCase
 
         try { // Regenera las tablas con todas las entidades mapeadas
             /** @var EntityManagerInterface $e_manager */
-            $e_manager = self::$container
-                ->get('doctrine')
-                ->getManager();
+            $e_manager = self::$container->get('doctrine')->getManager();
 
             $metadata = $e_manager
                 ->getMetadataFactory()
@@ -106,6 +104,23 @@ class BaseTestCase extends WebTestCase
 
         $e_manager->persist($role_admin);
         $e_manager->persist($role_user);
+        $e_manager->flush();
+
+        $result1 = new Results(
+            $role_admin,
+            self::$faker->randomFloat(2, 0, 100),
+            new \DateTime() // Hora actual
+        );
+
+        $result2 = new Results(
+            $role_admin,
+            self::$faker->randomFloat(2, 0, 100),
+            new \DateTime()
+        );
+
+        $e_manager->persist($result1);
+        $e_manager->persist($result2);
+
         $e_manager->flush();
     }
 

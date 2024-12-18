@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 interface ApiResultsQueryInterface
 {
+    public final const RUTA_API = '/api/v1/results';
     /**
      * Retorna todos los resultados del usuario autenticado.
      *

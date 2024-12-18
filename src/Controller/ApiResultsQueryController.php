@@ -4,6 +4,7 @@
 namespace App\Controller;
 
 use App\Entity\Results;
+use App\Entity\User;
 use App\Utility\Utils;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
@@ -12,13 +13,14 @@ use Symfony\Component\HttpFoundation\{Request, Response};
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route(
-    path: '/api/results',
+    path: ApiResultsQueryInterface::RUTA_API,
     name: 'api_results_'
 )]
 class ApiResultsQueryController extends AbstractController implements ApiResultsQueryInterface
 {
     private const HEADER_CACHE_CONTROL = 'Cache-Control';
     private const HEADER_ETAG = 'ETag';
+    private const HEADER_ALLOW = 'Allow';
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager
@@ -30,7 +32,7 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
         path: ".{_format}/{sort?id}",
         name: 'cget',
         requirements: [
-            'sort' => "id|email|roles",
+            'sort' => "id",
             '_format' => "json|xml"
         ],
         defaults: [ '_format' => 'json', 'sort' => 'id' ],
@@ -44,12 +46,17 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
             return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
         }
 
-        $user = $this->getUser();
-        $results = $this->entityManager->getRepository(Results::class)->findBy(['userId' => $user->getId()], ['time' => 'DESC']);
+        $order = strval($request->get('sort'));
+        $results = $this->entityManager
+            ->getRepository(Results::class)
+            ->findBy([], [ $order => 'ASC' ]);
 
+        // No hay resultados?
+        // @codeCoverageIgnoreStart
         if (empty($results)) {
-            return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'No results found.', $format);
+            return Utils::errorMessage(Response::HTTP_NOT_FOUND, null, $format);
         }
+        // @codeCoverageIgnoreEnd
 
         $etag = md5(json_encode($results, JSON_THROW_ON_ERROR));
         if (($etags = $request->getETags()) && (in_array($etag, $etags) || in_array('*', $etags))) {
@@ -58,7 +65,7 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
 
         return Utils::apiResponse(
             Response::HTTP_OK,
-            ['results' => $results],
+            ['results' => array_map(fn ($r) => ['result' => $r], $results)],
             $format,
             [
                 self::HEADER_CACHE_CONTROL => 'private',
@@ -85,14 +92,12 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
             return Utils::errorMessage(Response::HTTP_UNAUTHORIZED, '`Unauthorized`: Invalid credentials.', $format);
         }
 
-        $result = $this->entityManager->getRepository(Results::class)->find($resultId);
+        $result = $this->entityManager
+            ->getRepository(Results::class)
+            ->find($resultId);
 
         if (!$result instanceof Results) {
             return Utils::errorMessage(Response::HTTP_NOT_FOUND, 'Result not found.', $format);
-        }
-
-        if ($this->getUser()->getId() !== $result->getUserId() && !$this->isGranted('ROLE_ADMIN')) {
-            return Utils::errorMessage(Response::HTTP_FORBIDDEN, '`Forbidden`: Access denied.', $format);
         }
 
         $etag = md5(json_encode($result, JSON_THROW_ON_ERROR));
@@ -102,7 +107,7 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
 
         return Utils::apiResponse(
             Response::HTTP_OK,
-            ['result' => $result],
+            [Results::RESULTS_ATTR => $result],
             $format,
             [
                 self::HEADER_CACHE_CONTROL => 'private',
@@ -112,29 +117,30 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
     }
 
     #[Route(
-        path: "/{userId}.{_format}",
+        path: "/{resultId}.{_format}",
         name: 'options',
         requirements: [
-            'userId' => "\d+",
+            'resultId' => "\d+",
             '_format' => "json|xml"
         ],
-        defaults: [ 'userId' => 0, '_format' => 'json' ],
+        defaults: [ 'resultId' => 0, '_format' => 'json' ],
         methods: [ Request::METHOD_OPTIONS ],
     )]
-    public function optionsAction(int|null $resultId): Response
+    public function optionsAction(?int $resultId): Response
     {
         $methods = $resultId !== 0
-            ? [Request::METHOD_GET, Request::METHOD_PUT, Request::METHOD_DELETE]
-            : [Request::METHOD_GET, Request::METHOD_POST];
+            ? [ Request::METHOD_GET, Request::METHOD_PUT, Request::METHOD_DELETE ]
+            : [ Request::METHOD_GET, Request::METHOD_POST ];
         $methods[] = Request::METHOD_OPTIONS;
 
         return new Response(
             null,
             Response::HTTP_NO_CONTENT,
             [
-                'Allow' => implode(',', $methods),
-                'Cache-Control' => 'public, immutable',
+                self::HEADER_ALLOW => implode(',', $methods),
+                self::HEADER_CACHE_CONTROL => 'public, inmutable'
             ]
         );
     }
+
 }

@@ -13,7 +13,6 @@ use Symfony\Component\HttpFoundation\{Request, Response};
 interface ApiUsersQueryInterface
 {
     public final const RUTA_API = '/api/v1/users';
-    public final const RUTA_API_RESULTS = '/api/v1/results';
     /**
      * **CGET** Action<br>
      * Summary: Retrieves the collection of User resources.<br>

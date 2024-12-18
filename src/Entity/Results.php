@@ -10,9 +10,10 @@ use JsonSerializable;
 #[ORM\Entity, ORM\Table(name: 'results')]
 class Results implements JsonSerializable
 {
+    public final const RESULTS_ATTR = 'results';
     public final const RESULT_ATTR = 'result';
     public final const TIME_ATTR = 'time';
-    public final const USER_ID_ATTR = 'user_id';
+    public final const USER_ATTR = 'user';
 
     #[ORM\Column(
         name: 'id',
@@ -23,40 +24,35 @@ class Results implements JsonSerializable
     #[Serializer\XmlAttribute]
     protected ?int $id = 0;
 
-    #[ORM\Column(
-        name: 'user_id',
-        type: 'integer',
-        nullable: false
+    #[ORM\ManyToOne(
+        targetEntity: User::class,
+        inversedBy: 'results'
     )]
-    #[Serializer\SerializedName(Results::USER_ID_ATTR), Serializer\XmlElement(cdata: false)]
-    protected int $userId;
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false)]
+    protected User $user;
 
     #[ORM\Column(
         name: 'result',
-        type: 'string',
+        type: 'float',
         length: 255,
         nullable: false
     )]
     #[Serializer\SerializedName(Results::RESULT_ATTR), Serializer\XmlElement(cdata: false)]
-    protected string $result;
+    protected float $result;
 
     #[ORM\Column(
         name: 'time',
         type: 'datetime',
         nullable: false
     )]
-    #[Serializer\SerializedName(Results::TIME_ATTR), Serializer\XmlElement(cdata: false)]
+    #[Serializer\SerializedName(Results::TIME_ATTR)]
+    #[Serializer\Type("DateTime<'Y-m-d H:i:s'>")]
+    #[Serializer\XmlElement(cdata: false)]
     protected \DateTime $time;
 
-    /**
-     * Result constructor.
-     * @param int $userId
-     * @param string $result
-     * @param \DateTime $time
-     */
-    public function __construct(int $userId = 0, string $result = '', \DateTime $time = null)
+    public function __construct(User $user, float $result = 0.0, \DateTime $time = null)
     {
-        $this->userId = $userId;
+        $this->user = $user;
         $this->result = $result;
         $this->time = $time ?? new \DateTime();
     }
@@ -66,22 +62,23 @@ class Results implements JsonSerializable
         return $this->id;
     }
 
-    public function getUserId(): int
+    public function getUser(): User
     {
-        return $this->userId;
+        return $this->user;
     }
 
-    public function setUserId(int $userId): void
+    public function setUser(User $user): self
     {
-        $this->userId = $userId;
+        $this->user = $user;
+        return $this;
     }
 
-    public function getResult(): string
+    public function getResult(): float
     {
         return $this->result;
     }
 
-    public function setResult(string $result): void
+    public function setResult(float $result): void
     {
         $this->result = $result;
     }
@@ -104,8 +101,8 @@ class Results implements JsonSerializable
     public function jsonSerialize(): array
     {
         return [
-            'Id' => $this->getId(),
-            self::USER_ID_ATTR => $this->getUserId(),
+            'id' => $this->getId(),
+            self::USER_ATTR => $this->getUser()->jsonSerialize(),
             self::RESULT_ATTR => $this->getResult(),
             self::TIME_ATTR => $this->getTime()->format('Y-m-d H:i:s'),
         ];
